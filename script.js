@@ -320,9 +320,61 @@ function updateKeyboardHints() {
 }
 
 // ========================================
-// Weather Function
+// Weather Function (OpenWeather API Integration)
 // ========================================
 
+// Replace with your OpenWeather API key
+const OPENWEATHER_API_KEY = 'PASTE_YOUR_OPENWEATHER_API_KEY_HERE';
+
+// Default location (city name or coordinates) - you may choose to make this user-configurable
+const DEFAULT_LOCATION = 'New York'; // e.g., city name or {lat: xx, lon: yy}
+
+async function updateWeather() {
+    if (!weatherElement) return;
+
+    let query = `q=${DEFAULT_LOCATION}`;
+    // Optionally, use geolocation:
+    // if ('geolocation' in navigator) {
+    //     navigator.geolocation.getCurrentPosition(pos => {
+    //         query = `lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`;
+    //         fetchWeather(query);
+    //     }, () => {
+    //         fetchWeather(query);
+    //     });
+    // } else {
+    //     fetchWeather(query);
+    // }
+    // For now, just use city name:
+    fetchWeather(query);
+}
+
+async function fetchWeather(query) {
+    try {
+        const unit = settings.tempUnit === 'C' ? 'metric' : 'imperial';
+        const response = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?${query}&appid=${OPENWEATHER_API_KEY}&units=${unit}`
+        );
+        if (!response.ok) throw new Error('Weather API error');
+        const data = await response.json();
+
+        // Get temperature, condition, and icon info
+        const temp = Math.round(data.main.temp);
+        const condition = data.weather[0].main; // e.g., "Clouds"
+        const iconCode = data.weather[0].icon;
+        const iconUrl = `https://openweathermap.org/img/wn/${iconCode}.svg`;
+
+        weatherElement.textContent = `${temp}°${unit === 'metric' ? 'C' : 'F'} ${condition}`;
+        const iconElement = weatherElement.previousElementSibling;
+        if (iconElement) {
+            // Show OpenWeather icon
+            iconElement.innerHTML = `<img src="${iconUrl}" alt="${condition}" style="width:1.5em;height:1.5em;vertical-align:middle;">`;
+        }
+    } catch (err) {
+        weatherElement.textContent = 'Weather unavailable';
+        const iconElement = weatherElement.previousElementSibling;
+        if (iconElement) iconElement.innerHTML = `<i class="fa-solid fa-cloud"></i>`;
+    }
+}
 function updateWeather() {
     if (!weatherElement) return;
     
