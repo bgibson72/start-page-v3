@@ -255,6 +255,8 @@ function updateGreeting(hour) {
     const iconElement = document.getElementById('greeting-icon');
     // Greeting icon is controlled by weather function now
 
+}
+
 // ========================================
 // Search Functions
 // ========================================
