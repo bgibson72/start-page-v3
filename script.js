@@ -9,13 +9,6 @@
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 // ========================================
-// Global Timer References (for cleanup)
-// ========================================
-
-let timeUpdateAnimationFrame = null;
-let weatherUpdateInterval = null;
-
-// ========================================
 // Default Data
 // ========================================
 
@@ -258,52 +251,37 @@ let searchInput, timeElement, dateElement, greetingElement, weatherElement, quot
 // ========================================
 
 function updateDateTime() {
-    // Safety check: ensure document and elements are still valid
-    if (!document.body || !timeElement || !dateElement) {
-        if (timeUpdateInterval) {
-            clearInterval(timeUpdateInterval);
-            timeUpdateInterval = null;
+    if (!timeElement || !dateElement) return;
+    
+    const now = new Date();
+    
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    let timeString;
+    
+    if (settings.timeFormat === '12') {
+        const period = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        if (settings.showSeconds === 'true') {
+            timeString = `${hours}:${minutes}:${seconds} ${period}`;
+        } else {
+            timeString = `${hours}:${minutes} ${period}`;
         }
-        return;
+    } else {
+        if (settings.showSeconds === 'true') {
+            timeString = `${hours.toString().padStart(2, '0')}:${minutes}:${seconds}`;
+        } else {
+            timeString = `${hours.toString().padStart(2, '0')}:${minutes}`;
+        }
     }
     
-    try {
-        const now = new Date();
-        
-        let hours = now.getHours();
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const seconds = now.getSeconds().toString().padStart(2, '0');
-        let timeString;
-        
-        if (settings.timeFormat === '12') {
-            const period = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12 || 12;
-            if (settings.showSeconds === 'true') {
-                timeString = `${hours}:${minutes}:${seconds} ${period}`;
-            } else {
-                timeString = `${hours}:${minutes} ${period}`;
-            }
-        } else {
-            if (settings.showSeconds === 'true') {
-                timeString = `${hours.toString().padStart(2, '0')}:${minutes}:${seconds}`;
-            } else {
-                timeString = `${hours.toString().padStart(2, '0')}:${minutes}`;
-            }
-        }
-        
-        timeElement.textContent = timeString;
-        
-        const options = { weekday: 'long', month: 'short', day: 'numeric' };
-        dateElement.textContent = now.toLocaleDateString('en-US', options);
-        
-        updateGreeting(now.getHours());
-    } catch (error) {
-        console.error('Error in updateDateTime:', error);
-        if (timeUpdateInterval) {
-            clearInterval(timeUpdateInterval);
-            timeUpdateInterval = null;
-        }
-    }
+    timeElement.textContent = timeString;
+    
+    const options = { weekday: 'long', month: 'short', day: 'numeric' };
+    dateElement.textContent = now.toLocaleDateString('en-US', options);
+    
+    updateGreeting(now.getHours());
 }
 
 function updateGreeting(hour) {
@@ -428,44 +406,29 @@ function updateKeyboardHints() {
 // ========================================
 
 async function updateWeather() {
-    // Safety check: ensure document and elements are still valid
-    if (!document.body || !weatherElement) {
-        if (weatherUpdateInterval) {
-            clearInterval(weatherUpdateInterval);
-            weatherUpdateInterval = null;
-        }
+    if (!weatherElement) return;
+
+    // Check if API key is configured
+    if (!settings.openWeatherApiKey || !settings.weatherLocation) {
+        // Fall back to mock weather data if no API key or location
+        showMockWeather();
         return;
     }
 
-    try {
-        // Check if API key is configured
-        if (!settings.openWeatherApiKey || !settings.weatherLocation) {
-            // Fall back to mock weather data if no API key or location
-            showMockWeather();
-            return;
-        }
-
-        let query = `q=${encodeURIComponent(settings.weatherLocation)}`;
-        // Optionally, use geolocation:
-        // if ('geolocation' in navigator) {
-        //     navigator.geolocation.getCurrentPosition(pos => {
-        //         query = `lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`;
-        //         fetchWeather(query);
-        //     }, () => {
-        //         fetchWeather(query);
-        //     });
-        // } else {
-        //     fetchWeather(query);
-        // }
-        // For now, just use city name:
-        fetchWeather(query);
-    } catch (error) {
-        console.error('Error in updateWeather:', error);
-        if (weatherUpdateInterval) {
-            clearInterval(weatherUpdateInterval);
-            weatherUpdateInterval = null;
-        }
-    }
+    let query = `q=${encodeURIComponent(settings.weatherLocation)}`;
+    // Optionally, use geolocation:
+    // if ('geolocation' in navigator) {
+    //     navigator.geolocation. getCurrentPosition(pos => {
+    //         query = `lat=${pos.coords. latitude}&lon=${pos.coords.longitude}`;
+    //         fetchWeather(query);
+    //     }, () => {
+    //         fetchWeather(query);
+    //     });
+    // } else {
+    //     fetchWeather(query);
+    // }
+    // For now, just use city name:
+    fetchWeather(query);
 }
 
 async function fetchWeather(query) {
@@ -1379,15 +1342,14 @@ function executeCommand(input) {
 // ========================================
 
 function init() {
-    try {
-        // Get DOM elements
-        searchInput = document.getElementById('search');
-        timeElement = document.getElementById('time');
-        dateElement = document.getElementById('date');
-        greetingElement = document.getElementById('greeting');
-        weatherElement = document.getElementById('weather');
-        quoteElement = document.getElementById('quote');
-        linksGrid = document. getElementById('links-grid');
+    // Get DOM elements
+    searchInput = document.getElementById('search');
+    timeElement = document.getElementById('time');
+    dateElement = document.getElementById('date');
+    greetingElement = document.getElementById('greeting');
+    weatherElement = document.getElementById('weather');
+    quoteElement = document.getElementById('quote');
+    linksGrid = document. getElementById('links-grid');
     
     // Hide "New Window" option on Safari (it behaves the same as "New Tab")
     if (isSafari) {
@@ -1405,42 +1367,9 @@ function init() {
     renderLinksGrid();
     renderSearchEngines();
     
-    // Update time immediately (no auto-refresh for Safari stability)
+    // Update time immediately and every second
     updateDateTime();
-    
-    // Safari-specific: Only enable time updates on non-Safari browsers
-    if (!isSafari) {
-        // Cancel any existing animation frame
-        if (timeUpdateAnimationFrame) {
-            cancelAnimationFrame(timeUpdateAnimationFrame);
-        }
-        // Use requestAnimationFrame for time updates (automatically pauses when page hidden)
-        let lastTimeUpdate = Date.now();
-        function timeUpdateLoop() {
-            try {
-                // Stop if page is hidden or document is invalid
-                if (document.hidden || !document.body || !timeElement) {
-                    return; // Don't schedule next frame
-                }
-                
-                const now = Date.now();
-                // Update every second
-                if (now - lastTimeUpdate >= 1000) {
-                    updateDateTime();
-                    lastTimeUpdate = now;
-                }
-                
-                // Schedule next frame only if page is still visible
-                if (!document.hidden) {
-                    timeUpdateAnimationFrame = requestAnimationFrame(timeUpdateLoop);
-                }
-            } catch (error) {
-                console.error('Error in time update loop:', error);
-                // Don't schedule next frame on error
-            }
-        }
-        timeUpdateLoop();
-    }
+    setInterval(updateDateTime, 1000);
     
     // Add click handler to time element to toggle format
     if (timeElement) {
@@ -1454,35 +1383,9 @@ function init() {
         });
     }
     
-    // Update weather immediately (no auto-refresh for Safari stability)
+    // Update weather
     updateWeather();
-    
-    // Safari-specific: Only enable weather updates on non-Safari browsers
-    if (!isSafari) {
-        // Clear any existing interval before creating new one
-        if (weatherUpdateInterval) {
-            clearInterval(weatherUpdateInterval);
-        }
-        weatherUpdateInterval = setInterval(() => {
-            try {
-                // Stop interval if page is hidden or document is invalid
-                if (document.hidden || !document.body || !weatherElement) {
-                    if (weatherUpdateInterval) {
-                        clearInterval(weatherUpdateInterval);
-                        weatherUpdateInterval = null;
-                    }
-                    return;
-                }
-                updateWeather();
-            } catch (error) {
-                console.error('Error in weather update:', error);
-                if (weatherUpdateInterval) {
-                    clearInterval(weatherUpdateInterval);
-                    weatherUpdateInterval = null;
-                }
-            }
-        }, 600000);
-    }
+    setInterval(updateWeather, 600000);
     
     // Set random quote
     updateQuote();
@@ -1507,13 +1410,6 @@ function init() {
     setTimeout(() => {
         if (searchInput) searchInput.focus();
     }, 700);
-    
-    } catch (error) {
-        // Log error but don't crash
-        console.error('Sip initialization error:', error);
-        // Attempt cleanup even if init fails
-        cleanup();
-    }
 }
 
 // ========================================
@@ -1642,41 +1538,7 @@ function showNotification(message, type = 'info') {
 }
 
 // ========================================
-// Cleanup Function
-// ========================================
-
-function cleanup() {
-    try {
-        // Cancel animation frame for time updates
-        if (timeUpdateAnimationFrame) {
-            cancelAnimationFrame(timeUpdateAnimationFrame);
-            timeUpdateAnimationFrame = null;
-        }
-        // Clear weather update interval
-        if (weatherUpdateInterval) {
-            clearInterval(weatherUpdateInterval);
-            weatherUpdateInterval = null;
-        }
-        console.log('Cleanup completed successfully');
-    } catch (error) {
-        console.error('Error during cleanup:', error);
-    }
-}
-
-// ========================================
 // Start the application
 // ========================================
 
 document.addEventListener('DOMContentLoaded', init);
-
-// Clean up when page is unloaded (extension disabled, tab closed, etc.)
-window.addEventListener('beforeunload', cleanup);
-window.addEventListener('pagehide', cleanup);
-window.addEventListener('unload', cleanup);
-
-// Safari-specific: Also cleanup on visibility change
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        cleanup();
-    }
-});
