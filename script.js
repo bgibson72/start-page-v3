@@ -2612,6 +2612,421 @@ function showNotification(message, type = 'info') {
 }
 
 // ========================================
+// Bookmark Import Wizard
+// ========================================
+
+let parsedBookmarks = { categories: [], links: {} };
+
+// Open import wizard
+document.getElementById('import-bookmarks-button')?.addEventListener('click', () => {
+    document.getElementById('import-wizard-overlay').classList.add('active');
+    // Reset to upload step
+    document.getElementById('import-step-upload').style.display = 'block';
+    document.getElementById('import-step-preview').style.display = 'none';
+});
+
+// Close import wizard
+document.getElementById('import-wizard-close')?.addEventListener('click', () => {
+    document.getElementById('import-wizard-overlay').classList.remove('active');
+});
+
+// Close on overlay click
+document.getElementById('import-wizard-overlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'import-wizard-overlay') {
+        document.getElementById('import-wizard-overlay').classList.remove('active');
+    }
+});
+
+// File selection
+document.getElementById('select-bookmark-file')?.addEventListener('click', () => {
+    document.getElementById('bookmark-file-input').click();
+});
+
+// File upload handling
+document.getElementById('bookmark-file-input')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        parseBookmarkFile(file);
+    }
+});
+
+// Drag and drop support
+const uploadArea = document.getElementById('upload-area');
+uploadArea?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('drag-over');
+});
+
+uploadArea?.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('drag-over');
+});
+
+uploadArea?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && (file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
+        parseBookmarkFile(file);
+    } else {
+        showNotification('Please drop an HTML bookmark file', 'error');
+    }
+});
+
+// Parse bookmark HTML file
+function parseBookmarkFile(file) {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+        try {
+            const html = e.target.result;
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Parse bookmarks into categories
+            parsedBookmarks = extractBookmarks(doc);
+            
+            if (parsedBookmarks.categories.length === 0) {
+                showNotification('No bookmarks found in file', 'error');
+                return;
+            }
+            
+            // Show preview step
+            renderBookmarkPreview();
+            document.getElementById('import-step-upload').style.display = 'none';
+            document.getElementById('import-step-preview').style.display = 'block';
+            
+        } catch (error) {
+            showNotification('Error parsing bookmark file: ' + error.message, 'error');
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+// Extract bookmarks from HTML document
+function extractBookmarks(doc) {
+    const categories = [];
+    const links = {};
+    let categoryIdCounter = 1;
+    
+    // Function to process a folder/category
+    function processFolder(folderElement, parentName = '') {
+        // Get folder name from DT > H3 or DT > A
+        const dt = folderElement.querySelector('dt');
+        if (!dt) return null;
+        
+        const h3 = dt.querySelector('h3');
+        const folderName = h3 ? h3.textContent.trim() : 'Bookmarks';
+        
+        // Skip empty folders or toolbar folders without meaningful content
+        const dl = folderElement.querySelector('dl');
+        if (!dl) return null;
+        
+        const bookmarkLinks = [];
+        
+        // Process all DT elements in this folder
+        const dtElements = dl.querySelectorAll(':scope > dt');
+        dtElements.forEach(dtElem => {
+            // Check if it's a link or another folder
+            const anchor = dtElem.querySelector('a:not(h3 ~ a)');
+            const subFolder = dtElem.querySelector('h3');
+            
+            if (anchor && !subFolder) {
+                // It's a bookmark link
+                const url = anchor.getAttribute('href');
+                const name = anchor.textContent.trim();
+                
+                if (url && name && url.startsWith('http')) {
+                    bookmarkLinks.push({
+                        name: name,
+                        url: url,
+                        icon: 'fa-solid fa-link'
+                    });
+                }
+            } else if (subFolder) {
+                // It's a subfolder - process recursively
+                const subFolderData = processFolder(dtElem, folderName);
+                if (subFolderData) {
+                    categories.push(subFolderData.category);
+                    links[subFolderData.category.id] = subFolderData.links;
+                }
+            }
+        });
+        
+        // Only create category if it has links
+        if (bookmarkLinks.length > 0) {
+            const categoryId = 'imported-' + categoryIdCounter++;
+            const category = {
+                id: categoryId,
+                name: folderName,
+                icon: 'fa-solid fa-folder',
+                color: categoryColors[(categoryIdCounter - 2) % categoryColors.length]
+            };
+            
+            return { category, links: bookmarkLinks };
+        }
+        
+        return null;
+    }
+    
+    // Start parsing from the root
+    // Try to find the main bookmark structure
+    const rootDL = doc.querySelector('dl');
+    if (!rootDL) {
+        return { categories, links };
+    }
+    
+    // Process all top-level DT elements
+    const topLevelDTs = rootDL.querySelectorAll(':scope > dt');
+    topLevelDTs.forEach(dtElem => {
+        const h3 = dtElem.querySelector('h3');
+        const anchor = dtElem.querySelector('a:not(h3 ~ a)');
+        
+        if (h3) {
+            // It's a folder
+            const folderData = processFolder(dtElem);
+            if (folderData) {
+                categories.push(folderData.category);
+                links[folderData.category.id] = folderData.links;
+            }
+        } else if (anchor) {
+            // It's a top-level bookmark (no folder)
+            const url = anchor.getAttribute('href');
+            const name = anchor.textContent.trim();
+            
+            if (url && name && url.startsWith('http')) {
+                // Create "Other Bookmarks" category if not exists
+                let otherCategory = categories.find(c => c.name === 'Other Bookmarks');
+                if (!otherCategory) {
+                    otherCategory = {
+                        id: 'imported-other',
+                        name: 'Other Bookmarks',
+                        icon: 'fa-solid fa-bookmark',
+                        color: 'blue'
+                    };
+                    categories.push(otherCategory);
+                    links[otherCategory.id] = [];
+                }
+                
+                links[otherCategory.id].push({
+                    name: name,
+                    url: url,
+                    icon: 'fa-solid fa-link'
+                });
+            }
+        }
+    });
+    
+    return { categories, links };
+}
+
+// Render bookmark preview
+function renderBookmarkPreview() {
+    const previewContainer = document.getElementById('import-preview');
+    previewContainer.innerHTML = '';
+    
+    // Calculate totals
+    let totalBookmarks = 0;
+    parsedBookmarks.categories.forEach(cat => {
+        totalBookmarks += parsedBookmarks.links[cat.id]?.length || 0;
+    });
+    
+    document.getElementById('bookmark-count').textContent = totalBookmarks;
+    document.getElementById('category-count').textContent = parsedBookmarks.categories.length;
+    
+    // Render each category
+    parsedBookmarks.categories.forEach(category => {
+        const categoryLinks = parsedBookmarks.links[category.id] || [];
+        
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'import-category';
+        categoryDiv.dataset.categoryId = category.id;
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'import-category-header';
+        
+        const checkboxLabel = document.createElement('label');
+        checkboxLabel.className = 'import-category-checkbox';
+        
+        const categoryCheckbox = document.createElement('input');
+        categoryCheckbox.type = 'checkbox';
+        categoryCheckbox.checked = true;
+        categoryCheckbox.dataset.categoryId = category.id;
+        categoryCheckbox.addEventListener('change', (e) => {
+            // Toggle all links in this category
+            const linkCheckboxes = categoryDiv.querySelectorAll('.import-link-checkbox input');
+            linkCheckboxes.forEach(cb => cb.checked = e.target.checked);
+        });
+        
+        checkboxLabel.appendChild(categoryCheckbox);
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'import-category-info';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'import-category-name';
+        nameSpan.textContent = category.name;
+        
+        const countSpan = document.createElement('span');
+        countSpan.className = 'import-category-count';
+        countSpan.textContent = `(${categoryLinks.length} ${categoryLinks.length === 1 ? 'link' : 'links'})`;
+        
+        infoDiv.appendChild(nameSpan);
+        infoDiv.appendChild(countSpan);
+        
+        headerDiv.appendChild(checkboxLabel);
+        headerDiv.appendChild(infoDiv);
+        
+        const linksDiv = document.createElement('div');
+        linksDiv.className = 'import-links';
+        
+        categoryLinks.forEach((link, index) => {
+            const linkDiv = document.createElement('div');
+            linkDiv.className = 'import-link';
+            
+            const linkCheckboxLabel = document.createElement('label');
+            linkCheckboxLabel.className = 'import-link-checkbox';
+            
+            const linkCheckbox = document.createElement('input');
+            linkCheckbox.type = 'checkbox';
+            linkCheckbox.checked = true;
+            linkCheckbox.dataset.categoryId = category.id;
+            linkCheckbox.dataset.linkIndex = index;
+            linkCheckbox.addEventListener('change', () => {
+                // Update category checkbox state
+                const allChecked = Array.from(linksDiv.querySelectorAll('input[type="checkbox"]'))
+                    .every(cb => cb.checked);
+                categoryCheckbox.checked = allChecked;
+            });
+            
+            linkCheckboxLabel.appendChild(linkCheckbox);
+            
+            const linkInfo = document.createElement('div');
+            linkInfo.className = 'import-link-info';
+            
+            const linkName = document.createElement('div');
+            linkName.className = 'import-link-name';
+            linkName.textContent = link.name;
+            
+            const linkUrl = document.createElement('div');
+            linkUrl.className = 'import-link-url';
+            linkUrl.textContent = link.url;
+            
+            linkInfo.appendChild(linkName);
+            linkInfo.appendChild(linkUrl);
+            
+            linkDiv.appendChild(linkCheckboxLabel);
+            linkDiv.appendChild(linkInfo);
+            
+            linksDiv.appendChild(linkDiv);
+        });
+        
+        categoryDiv.appendChild(headerDiv);
+        categoryDiv.appendChild(linksDiv);
+        previewContainer.appendChild(categoryDiv);
+    });
+}
+
+// Select/Deselect all
+document.getElementById('select-all-btn')?.addEventListener('click', () => {
+    document.querySelectorAll('#import-preview input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+    });
+});
+
+document.getElementById('deselect-all-btn')?.addEventListener('click', () => {
+    document.querySelectorAll('#import-preview input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+});
+
+// Back to upload
+document.getElementById('back-to-upload')?.addEventListener('click', () => {
+    document.getElementById('import-step-upload').style.display = 'block';
+    document.getElementById('import-step-preview').style.display = 'none';
+    document.getElementById('bookmark-file-input').value = '';
+});
+
+// Import selected bookmarks
+document.getElementById('import-selected-btn')?.addEventListener('click', () => {
+    importSelectedBookmarks();
+});
+
+function importSelectedBookmarks() {
+    const selectedCategories = [];
+    const selectedLinks = {};
+    
+    // Collect selected bookmarks
+    parsedBookmarks.categories.forEach(category => {
+        const categoryDiv = document.querySelector(`[data-category-id="${category.id}"]`);
+        const linkCheckboxes = categoryDiv.querySelectorAll('.import-link-checkbox input:checked');
+        
+        if (linkCheckboxes.length > 0) {
+            const categoryLinks = [];
+            linkCheckboxes.forEach(checkbox => {
+                const linkIndex = parseInt(checkbox.dataset.linkIndex);
+                const link = parsedBookmarks.links[category.id][linkIndex];
+                categoryLinks.push(link);
+            });
+            
+            selectedCategories.push(category);
+            selectedLinks[category.id] = categoryLinks;
+        }
+    });
+    
+    if (selectedCategories.length === 0) {
+        showNotification('No bookmarks selected', 'error');
+        return;
+    }
+    
+    // Merge with existing categories and links
+    const existingCategories = loadCategories();
+    const existingLinks = loadLinks();
+    
+    // Add new categories (avoid duplicates)
+    selectedCategories.forEach(newCat => {
+        // Check if category with same name exists
+        const existingCat = existingCategories.find(c => c.name === newCat.name);
+        
+        if (existingCat) {
+            // Merge links into existing category
+            const existingCatLinks = existingLinks[existingCat.id] || [];
+            const newLinks = selectedLinks[newCat.id] || [];
+            
+            // Add links that don't already exist (based on URL)
+            newLinks.forEach(newLink => {
+                const isDuplicate = existingCatLinks.some(l => l.url === newLink.url);
+                if (!isDuplicate) {
+                    existingCatLinks.push(newLink);
+                }
+            });
+            
+            existingLinks[existingCat.id] = existingCatLinks;
+        } else {
+            // Add as new category
+            existingCategories.push(newCat);
+            existingLinks[newCat.id] = selectedLinks[newCat.id];
+        }
+    });
+    
+    // Save to localStorage
+    saveCategories(existingCategories);
+    saveLinks(existingLinks);
+    
+    // Update global variables
+    categories = existingCategories;
+    links = existingLinks;
+    
+    // Re-render UI
+    renderLinksGrid();
+    renderCategoriesPanel();
+    
+    // Close wizard and show success
+    document.getElementById('import-wizard-overlay').classList.remove('active');
+    showNotification(`Successfully imported ${selectedCategories.length} ${selectedCategories.length === 1 ? 'category' : 'categories'}!`, 'success');
+}
+
+// ========================================
 // Start the application
 // ========================================
 

@@ -4,6 +4,23 @@ Transform your browser's new tab into a beautiful, personalized workspace with S
 
 ---
 
+## 🎉 UPDATES - January 2026
+
+### 📥 **Bookmark Import Wizard** (v1.4.0)
+Import your existing browser bookmarks with ease!
+
+- **One-Click Import** - Select your browser's HTML bookmark export file
+- **Smart Category Detection** - Automatically converts bookmark folders into categories
+- **Selective Import** - Preview all bookmarks and choose which ones to import
+- **Category & Link Checkboxes** - Select entire categories or individual links
+- **Duplicate Prevention** - Avoids importing duplicate links (URL-based detection)
+- **Seamless Merge** - Integrates with existing categories or creates new ones
+- **Multi-Browser Support** - Works with bookmark exports from Chrome, Firefox, Edge, and Safari
+
+Access via **Settings → General → Import Bookmarks**
+
+---
+
 ## 🎉 UPDATES - December 2025
 
 ### 🎨 **9 Color Schemes with Light/Dark Modes**
@@ -109,6 +126,7 @@ Sip now includes 9 beautiful color schemes, each with both light and dark varian
 </details>
 
 ### ⚙️ **Enhanced Settings & Customization**
+- **Bookmark Import Wizard** - Import bookmarks from HTML files with smart category detection (v1.4.0)
 - **Backup & Restore** - Export and import all your settings, categories, and links (v1.1.1)
 - **Click Time to Toggle** - Click the clock to quickly switch between 12h/24h format
 - **Show Seconds Option** - Display seconds on the clock for precise timekeeping

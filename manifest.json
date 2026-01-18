@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Sip",
-  "version": "1.3.0",
-  "description": "A cozy new tab page with 9 beautiful color schemes, quick links, and extensive customization",
+  "version": "1.4.0",
+  "description": "A cozy new tab page with 9 beautiful color schemes, quick links, bookmark import, and extensive customization",
   "author": "Bryan Gibson",
 
   "browser_specific_settings": {

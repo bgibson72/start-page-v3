@@ -218,20 +218,37 @@
                             </div>
                         </div>
                         
-                        <div class="setting-item setting-item-vertical">
+                        <div class="setting-item">
                             <div class="setting-label">
                                 <i class="fa-solid fa-download"></i>
-                                <span>Backup & Restore</span>
+                                <div>
+                                    <span>Backup & Restore</span>
+                                    <p class="setting-description">Export or import all your settings, categories, and links.</p>
+                                </div>
                             </div>
-                            <p class="setting-description">Export or import all your settings, categories, and links.</p>
-                            <div class="backup-buttons">
-                                <button id="backup-button" class="backup-btn">
-                                    <i class="fa-solid fa-file-export"></i> Export Settings
+                            <div class="setting-actions">
+                                <button id="backup-button" class="action-btn">
+                                    <i class="fa-solid fa-file-export"></i> Export
                                 </button>
-                                <button id="restore-button" class="backup-btn">
-                                    <i class="fa-solid fa-file-import"></i> Import Settings
+                                <button id="restore-button" class="action-btn">
+                                    <i class="fa-solid fa-file-import"></i> Import
                                 </button>
                                 <input type="file" id="restore-file-input" accept=".json" style="display: none;">
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <i class="fa-solid fa-bookmark"></i>
+                                <div>
+                                    <span>Import Bookmarks</span>
+                                    <p class="setting-description">Import bookmarks from your browser's HTML bookmark file.</p>
+                                </div>
+                            </div>
+                            <div class="setting-actions">
+                                <button id="import-bookmarks-button" class="action-btn">
+                                    <i class="fa-solid fa-file-import"></i> Import
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -335,12 +352,12 @@
                                 <i class="fa-solid fa-image"></i>
                                 <span>Background Image</span>
                             </div>
-                            <div class="background-image-controls">
-                                <button class="file-picker-btn" id="background-image-btn">
+                            <div class="setting-actions">
+                                <button class="action-btn" id="background-image-btn">
                                     <i class="fa-solid fa-file-image"></i> Choose Image
                                 </button>
                                 <input type="file" id="background-image-input" accept="image/*" style="display: none;">
-                                <button class="file-picker-btn remove-btn" id="remove-background-btn" style="display: none;">
+                                <button class="action-btn" id="remove-background-btn" style="display: none;">
                                     <i class="fa-solid fa-xmark"></i> Remove
                                 </button>
                             </div>
@@ -550,6 +567,67 @@
                             </ul>
                             <p class="help-tip"><strong>Tip:</strong> Use <code>fa-solid</code> for general icons or <code>fa-brands</code> for company/brand logos.</p>
                         </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bookmark Import Wizard Modal -->
+        <div class="import-wizard-overlay" id="import-wizard-overlay">
+            <div class="import-wizard-modal">
+                <div class="import-wizard-header">
+                    <h3><i class="fa-solid fa-bookmark"></i> Import Bookmarks</h3>
+                    <button class="import-wizard-close" id="import-wizard-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                
+                <div class="import-wizard-body">
+                    <!-- Step 1: File Upload -->
+                    <div class="import-step" id="import-step-upload">
+                        <div class="import-step-content">
+                            <div class="upload-area" id="upload-area">
+                                <i class="fa-solid fa-file-arrow-up"></i>
+                                <h4>Select Bookmark File</h4>
+                                <p>Choose an HTML bookmark file exported from your browser</p>
+                                <button class="btn-primary" id="select-bookmark-file">
+                                    <i class="fa-solid fa-folder-open"></i> Browse Files
+                                </button>
+                                <input type="file" id="bookmark-file-input" accept=".html,.htm" style="display: none;">
+                                <p class="file-hint">Supported: Chrome, Firefox, Edge, Safari bookmark exports</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Preview & Selection -->
+                    <div class="import-step" id="import-step-preview" style="display: none;">
+                        <div class="import-step-content">
+                            <div class="import-header">
+                                <h4>Select Bookmarks to Import</h4>
+                                <p>Found <span id="bookmark-count">0</span> bookmarks in <span id="category-count">0</span> categories</p>
+                                <div class="import-actions">
+                                    <button class="btn-secondary" id="select-all-btn">
+                                        <i class="fa-solid fa-check-double"></i> Select All
+                                    </button>
+                                    <button class="btn-secondary" id="deselect-all-btn">
+                                        <i class="fa-solid fa-square"></i> Deselect All
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="import-preview" id="import-preview">
+                                <!-- Categories and bookmarks will be rendered here -->
+                            </div>
+                            
+                            <div class="import-footer">
+                                <button class="btn-secondary" id="back-to-upload">
+                                    <i class="fa-solid fa-arrow-left"></i> Back
+                                </button>
+                                <button class="btn-primary" id="import-selected-btn">
+                                    <i class="fa-solid fa-file-import"></i> Import Selected
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
