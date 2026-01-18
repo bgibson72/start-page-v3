@@ -1360,8 +1360,9 @@ body {
     background: var(--surface2);
 }
 
-.upload-btn i {
-    font-size: 0.75rem;
+.upload-btn i,
+.action-btn.upload-btn i {
+    font-size: 0.75rem !important;
 }
 
 /* Legacy backup button styles - keep for backwards compatibility */
